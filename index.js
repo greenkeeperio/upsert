@@ -1,11 +1,13 @@
 'use strict';
 
 var PouchPromise = require('pouchdb-promise');
+var Promise = require('bluebird');
+
 
 // this is essentially the "update sugar" function from daleharvey/pouchdb#1388
 // the diffFun tells us what delta to apply to the doc.  it either returns
 // the doc, or false if it doesn't need to do an update after all
-function upsertInner(db, docId, diffFun) {
+function upsertInner(db, docId, diffFun, hasTimeout) {
   if (typeof docId !== 'string') {
     return PouchPromise.reject(new Error('doc id is required'));
   }
@@ -31,11 +33,15 @@ function upsertInner(db, docId, diffFun) {
     // so reset them here
     newDoc._id = docId;
     newDoc._rev = docRev;
-    return tryAndPut(db, newDoc, diffFun);
+    return tryAndPut(db, newDoc, diffFun, hasTimeout);
   });
 }
 
-function tryAndPut(db, doc, diffFun) {
+function tryAndPut(db, doc, diffFun, hasTimeout) {
+  if(hasTimeout) {
+    var count = 0;
+  }
+
   return db.put(doc).then(function (res) {
     return {
       updated: true,
@@ -47,13 +53,25 @@ function tryAndPut(db, doc, diffFun) {
     if (err.status !== 409) {
       throw err;
     }
-    return upsertInner(db, doc._id, diffFun);
+    if(hasTimeout) {
+      if ( count <= (10 * 1000) ) {
+       count += 1000;
+      }
+
+      return new Promise(function(resolve) {
+        setTimeout(function() {
+          resolve(upsertInner(db, doc._id, diffFun, hasTimeout));
+        }, count);
+      });
+    } else {
+      return upsertInner(db, doc._id, diffFun);
+    }
   });
 }
 
-exports.upsert = function upsert(docId, diffFun, cb) {
+exports.upsert = function upsert(docId, diffFun, cb, hasTimeout) {
   var db = this;
-  var promise = upsertInner(db, docId, diffFun);
+  var promise = upsertInner(db, docId, diffFun, hasTimeout);
   if (typeof cb !== 'function') {
     return promise;
   }
