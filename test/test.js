@@ -86,26 +86,6 @@ function tests(dbName, dbType) {
       });
     });
 
-    it.only('should upsert a new doc, with timeout', function () {
-      return db.upsert('foo', function () {
-        return db.put({_id: 'foo'}, function() {
-          return new Error("409");
-        });
-      }, null, true)
-      .then(function () {
-        return db.get('foo');
-      })
-      .then(function (doc) {
-        console.log('### doc', doc);
-        doc._id.should.equal('foo');
-        // doc._rev.should.match(/^2-/);
-        // done();
-        return new Promise(function (resolve) {
-          resolve();
-        });
-      });
-    });
-
     it('should upsert a new doc in parallel', function () {
 
       function diff() {
