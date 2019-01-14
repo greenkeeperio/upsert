@@ -1,8 +1,6 @@
 'use strict';
 
 var PouchPromise = require('pouchdb-promise');
-var Promise = require('bluebird');
-
 
 // this is essentially the "update sugar" function from daleharvey/pouchdb#1388
 // the diffFun tells us what delta to apply to the doc.  it either returns
@@ -58,7 +56,7 @@ function tryAndPut(db, doc, diffFun, hasTimeout) {
        count += 1000;
       }
 
-      return new Promise(function(resolve) {
+      return new PouchPromise(function(resolve) {
         setTimeout(function() {
           resolve(upsertInner(db, doc._id, diffFun, hasTimeout));
         }, count);
